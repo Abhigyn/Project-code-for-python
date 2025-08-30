@@ -11,7 +11,7 @@ if __name__ == "__main__":
             "About 15.5 cups (3.7 liters) of fluids for men. "
             "About 11.5 cups (2.7 liters) of fluids for women."
         ),
-        app_icon=r"I:\Study\Golu lession\Python      Projects\icon.ico",  
+        app_icon=r"I:\Study\Golu lession\Python      Projects\images\icon.ico",  
         timeout=5
     )
      time.sleep(60*15)

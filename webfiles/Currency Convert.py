@@ -1,7 +1,7 @@
 import decimal
 import requests  # (you had it, keeping it even if unused)
 
-with open("Currency.txt", "r", encoding="utf-8") as f:
+with open(r"i:\Study\Golu lession\Python      Projects\docs\Currency.txt", "r", encoding="utf-8") as f:
     lines = f.readlines()
 
 CurrencyDict = {}
