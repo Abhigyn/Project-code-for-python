@@ -1,0 +1,6 @@
+OPENAI_API_KEY = "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"
+NEWS_API_KEY = "3374e91a6826474285aee896ea088227"
+WEATHER_API_KEY = "your_openweather_key"
+PORCUPINE_KEY = "your_porcupine_access_key"
+DEFAULT_CITY = "Hajipur, Bihar"
+LANGUAGE = "en-hi"
