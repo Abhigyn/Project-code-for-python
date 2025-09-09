@@ -45,7 +45,7 @@ def plot_snake(game_window, color, snake_list, snake_size):
         pygame.draw.rect(game_window, color, [x, y, snake_size, snake_size])
 
 def welcome():
-    """Intro screen"""
+#   """Intro screen"""
     pygame.mixer.music.load(bg_music)
     pygame.mixer.music.play(-1)
     pygame.mixer.music.set_volume(.6)
@@ -67,7 +67,7 @@ def welcome():
                     quit()
 
 def gameloop():
-    """Main game loop"""
+#    """Main game loop"""
     # Background music
     pygame.mixer.music.load(bg_music)
     pygame.mixer.music.play(-1)
