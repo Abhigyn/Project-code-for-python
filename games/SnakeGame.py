@@ -79,7 +79,8 @@ def gameloop():
     snake_size = 20
     snake_list = []
     snake_length = 1
-
+    x = snake_x
+    y = snake_y
     # Food
     food_x = random.randint(20, screen_width // 2)
     food_y = random.randint(20, screen_height // 2)
@@ -92,7 +93,7 @@ def gameloop():
 
     with open(r"../docs/Snake_High_Score.txt", "r") as f:
         highscore = int(f.read())
-
+    
     while True:
         if game_over:
             with open(r"../docs/Snake_High_Score.txt", "w") as f:
