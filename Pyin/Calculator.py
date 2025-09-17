@@ -1,4 +1,10 @@
 from tkinter import *
+import re
+
+def power(x, y):
+    return x ** y
+
+
 
 def click(event):
     global scvar
@@ -8,21 +14,45 @@ def click(event):
     if text == "=":
         if current_text:
             try:
-                # Using str() to handle both integers and floats
-                value = str(eval(current_text))
+                expression = current_text
+
+                # Handle percentage like real calculators
+                if "%" in expression:
+                    # Case: number + percent / number - percent
+                    match = re.match(r"(\d+(\.\d+)?)([+\-])(\d+(\.\d+)?)%", expression)
+                    if match:
+                        base = float(match.group(1))
+                        op = match.group(3)
+                        perc = float(match.group(4))
+                        value = base + perc*base/100 if op == "+" else base - perc*base/100
+                        scvar.set(str(value))
+                        return
+                    
+                    # Case: number * percent / number / percent
+                    match = re.match(r"(\d+(\.\d+)?)([*/])(\d+(\.\d+)?)%", expression)
+                    if match:
+                        base = float(match.group(1))
+                        op = match.group(3)
+                        perc = float(match.group(4))/100
+                        value = base * perc if op == "*" else base / perc
+                        scvar.set(str(value))
+                        return
+                    
+                    # Fallback: just replace % with /100
+                    expression = expression.replace("%", "/100")
+            
+                value = str(eval(expression))
                 scvar.set(value)
             except Exception as e:
                 scvar.set("ERROR")
     elif text == "C":
         scvar.set("")
     else:
-        # Prevent starting with an operator or multiple operators together
-        if text in "+-*/" and (not current_text or current_text[-1] in "+-*/"):
+        if text in "+-*/%" and (not current_text or current_text[-1] in "+-*/"):
             return
         scvar.set(current_text + text)
     
     Screen.update()
-    # Move view to the end of the entry text
     Screen.xview_moveto(1)
 
 def on_mousewheel(event):
@@ -33,42 +63,26 @@ def on_mousewheel(event):
     else:
         canvas.yview_scroll(int(-1*event.delta), "units")
 
-# --- START: NEW KEYBOARD FUNCTION ---
 def on_keypress(event):
     key = event.char
-    # Map common keyboard keys to calculator buttons
-    if key in '0123456789.+-*/':
-        # Simulate a button click
+    if key in '0123456789.+-*/%':
         click_event = type('obj', (object,), {'widget': type('obj', (object,), {'cget': lambda x: key})})
         click(click_event)
-    elif key == '\r':  # The Enter key
+    elif key == '\r':
         click_event = type('obj', (object,), {'widget': type('obj', (object,), {'cget': lambda x: '='})})
         click(click_event)
-    elif key == '\x08':  # The Backspace key
+    elif key == '\x08':
         current_text = scvar.get()
         scvar.set(current_text[:-1])
-# --- END: NEW KEYBOARD FUNCTION ---
 
 root = Tk()
 root.geometry("500x400")
 root.title("Calculator")
-root.wm_iconbitmap(r"I:\Study\Golu lession\Python      Projects\images\Calculator.ico")
-
-# --- START: CENTERING THE WINDOW ---
-root.update_idletasks()
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
-window_width = root.winfo_width()
-window_height = root.winfo_height()
-x_pos = int((screen_width - window_width) / 2)
-y_pos = int((screen_height - window_height) / 2)
-root.geometry(f"+{x_pos}+{y_pos}")
-# --- END: CENTERING THE WINDOW ---
+root.iconbitmap("Calculator.ico")
 
 scvar = StringVar()
 scvar.set("")
 
-# --- TOP DISPLAY AREA (UNSCROLLED) ---
 top_frame = Frame(root)
 top_frame.pack(fill=X, padx=10, pady=5)
 
@@ -79,7 +93,6 @@ Screen.config(xscrollcommand=h_scrollbar.set)
 Screen.pack(fill=X, ipady=8)
 h_scrollbar.pack(fill=X)
 
-# --- START: VERTICAL SCROLL AREA FOR BUTTONS ---
 main_frame = Frame(root)
 main_frame.pack(fill=BOTH, expand=1)
 
@@ -90,90 +103,31 @@ v_scrollbar = Scrollbar(main_frame, orient=VERTICAL, command=canvas.yview)
 v_scrollbar.pack(side=RIGHT, fill=Y)
 
 canvas.configure(yscrollcommand=v_scrollbar.set)
-canvas.bind('<Configure>', lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-
 canvas.bind_all("<MouseWheel>", on_mousewheel)
 
 button_frame = Frame(canvas)
-canvas.create_window((0, 0), window=button_frame, anchor="nw")
 
-# --- END: VERTICAL SCROLL AREA SETUP ---
+def update_canvas(e):
+    canvas.itemconfig(frame_window, width=canvas.winfo_width())
+    canvas.coords(frame_window, canvas.winfo_width()/2, 0)
 
-# --- START: BIND KEYPRESS EVENT ---
+frame_window = canvas.create_window((canvas.winfo_width()/2, 0), window=button_frame, anchor="n")
+canvas.bind("<Configure>", update_canvas)
+
 root.bind("<KeyPress>", on_keypress)
-# --- END: BIND KEYPRESS EVENT ---
 
-# Note: All button frames are now placed inside 'button_frame' instead of 'root'
-f = Frame(button_frame, bg="grey")
-b = Button(f, text="9", padx=20, font="lucida 35 bold")
-b.pack(side=LEFT, padx=5, pady=5)
-b.bind("<Button-1>", click)
+def add_row(buttons, font_size=35):
+    f = Frame(button_frame, bg="grey")
+    for txt in buttons:
+        b = Button(f, text=txt, padx=20, font=f"lucida {font_size} bold")
+        b.pack(side=LEFT, padx=5, pady=5)
+        b.bind("<Button-1>", click)
+    f.pack(anchor="center")
 
-b = Button(f, text="8", padx=20, font="lucida 35 bold")
-b.pack(side=LEFT, padx=5, pady=5)
-b.bind("<Button-1>", click)
-
-b = Button(f, text="7", padx=20, font="lucida 35 bold")
-b.pack(side=LEFT, padx=5, pady=5)
-b.bind("<Button-1>", click)
-
-b = Button(f, text="+", padx=20, font="lucida 35 bold")
-b.pack(side=LEFT, padx=5, pady=5,)
-b.bind("<Button-1>", click)
-f.pack()
-
-f = Frame(button_frame, bg="grey")
-b = Button(f, text="6", padx=20, font="lucida 37 bold")
-b.pack(side=LEFT, padx=5, pady=5)
-b.bind("<Button-1>", click)
-
-b = Button(f, text="5", padx=20, font="lucida 37 bold")
-b.pack(side=LEFT, padx=5, pady=5)
-b.bind("<Button-1>", click)
-
-b = Button(f, text="4", padx=20, font="lucida 37 bold")
-b.pack(side=LEFT, padx=5, pady=5)
-b.bind("<Button-1>", click)
-
-b = Button(f, text="-", padx=22, font="lucida 37 bold")
-b.pack(side=LEFT, padx=5, pady=5)
-b.bind("<Button-1>", click)
-f.pack()
-
-f = Frame(button_frame, bg="grey")
-b = Button(f, text="3", padx=20, font="lucida 37 bold")
-b.pack(side=LEFT, padx=5, pady=5)
-b.bind("<Button-1>", click)
-
-b = Button(f, text="2", padx=20, font="lucida 37 bold")
-b.pack(side=LEFT, padx=5, pady=5)
-b.bind("<Button-1>", click)
-
-b = Button(f, text="1", padx=20, font="lucida 37 bold")
-b.pack(side=LEFT, padx=5, pady=5)
-b.bind("<Button-1>", click)
-
-b = Button(f, text="/", padx=23, font="lucida 37 bold")
-b.pack(side=LEFT, padx=5, pady=5)
-b.bind("<Button-1>", click)
-f.pack()
-
-f = Frame(button_frame, bg="grey")
-b = Button(f, text="=", padx=22, font="lucida 33 bold")
-b.pack(side=LEFT, padx=5, pady=5)
-b.bind("<Button-1>", click)
-
-b = Button(f, text="0", padx=20, font="lucida 33 bold")
-b.pack(side=LEFT, padx=5, pady=5)
-b.bind("<Button-1>", click)
-
-b = Button(f, text="C", padx=20, font="lucida 33 bold")
-b.pack(side=LEFT, padx=5, pady=5)
-b.bind("<Button-1>", click)
-
-b = Button(f, text=".", padx=30, font="lucida 33 bold")
-b.pack(side=LEFT, padx=5, pady=5)
-b.bind("<Button-1>", click)
-f.pack()
+add_row(["C", "%", "=", "%"], font_size=33)
+add_row(["9", "8", "7", "+"], font_size=37)
+add_row(["6", "5", "4", "-"], font_size=38)
+add_row(["3", "2", "1", "/","!"], font_size=38)
+add_row(["0", "00", ".","*","^"], font_size=35)
 
 root.mainloop()

@@ -2,10 +2,10 @@
 
 
 a = Analysis(
-    ['calculator.py'],
+    ['Calculator.py'],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[('appicon.ico', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
@@ -22,7 +22,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name='calculator',
+    name='Calculator',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -35,4 +35,5 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+    icon=['appicon.ico'],
 )
