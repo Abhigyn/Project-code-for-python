@@ -2,168 +2,180 @@ import pygame
 import random
 import os
 
-# --- Init ---
 pygame.init()
-pygame.mixer.init()
 
-# --- Screen setup ---
-screen_width = 900
+# ----------------- Screen Setup -----------------
+screen_width = 800
 screen_height = 600
-game_window = pygame.display.set_mode((screen_width, screen_height))
-pygame.display.set_caption("Snake Game - Complete Version")
+screen = pygame.display.set_mode((screen_width, screen_height))
+pygame.display.set_caption("Snake Game with Sprites")
 
-# --- Colors ---
-white = (255, 255, 255)
-red = (255, 0, 0)
-black = (0, 0, 0)
-
-# --- Clock & Font ---
 clock = pygame.time.Clock()
-font = pygame.font.SysFont(None, 45)
+fps = 15
 
-# --- Load images once ---
-Background_image = pygame.image.load(r"../images/bg2.png").convert()
-Intro_image = pygame.image.load(r"../images/Intro.png").convert()
-Outro_image = pygame.image.load(r"../images/Outro1.png").convert()
+# ----------------- Colors -----------------
+white = (255, 255, 255)
+bg_color = (175, 215, 70) 
 
-# --- Load sounds once ---
-bg_music = r"../audio/Baground.ogg"      # background looping music
-beep_sound = pygame.mixer.Sound(r"../audio/Beep.ogg")
-gameover_sound = pygame.mixer.Sound(r"../audio/GameOver.ogg")
+# ----------------- Asset Loader -----------------
+def load_and_scale(path, size=(40, 40)):
+    return pygame.transform.scale(pygame.image.load(path).convert_alpha(), size)
 
-# --- Highscore setup ---
-if not os.path.exists(r"../docs/Snake_High_Score.txt"):
-    with open(r"../docs/Snake_High_Score.txt", "w") as f:
-        f.write("0")
+# Correct folder path
+graphics_path = os.path.join(os.path.dirname(__file__), "snake_graphics")
 
-def text_screen(text, color, x, y):
-    screen_text = font.render(text, True, color)
-    game_window.blit(screen_text, [x, y])
+# Apple
+apple_img = load_and_scale(os.path.join(graphics_path, "apple.png"))
 
-def plot_snake(game_window, color, snake_list, snake_size):
-    for x, y in snake_list:
-        pygame.draw.rect(game_window, color, [x, y, snake_size, snake_size])
+# Snake Head
+head_up_img = load_and_scale(os.path.join(graphics_path, "head_up.png"))
+head_down_img = load_and_scale(os.path.join(graphics_path, "head_down.png"))
+head_left_img = load_and_scale(os.path.join(graphics_path, "head_left.png"))
+head_right_img = load_and_scale(os.path.join(graphics_path, "head_right.png"))
 
-def welcome():
-#   """Intro screen"""
-    pygame.mixer.music.load(bg_music)
-    pygame.mixer.music.play(-1)
-    pygame.mixer.music.set_volume(.6)
+# Snake Tail
+tail_up_img = load_and_scale(os.path.join(graphics_path, "tail_up.png"))
+tail_down_img = load_and_scale(os.path.join(graphics_path, "tail_down.png"))
+tail_left_img = load_and_scale(os.path.join(graphics_path, "tail_left.png"))
+tail_right_img = load_and_scale(os.path.join(graphics_path, "tail_right.png"))
 
-    waiting = True
-    while waiting:
-        game_window.blit(Intro_image, (0, 0))
-        pygame.display.update()
+# Snake Body
+body_vertical_img = load_and_scale(os.path.join(graphics_path, "body_vertical.png"))
+body_horizontal_img = load_and_scale(os.path.join(graphics_path, "body_horizontal.png"))
+body_topleft_img = load_and_scale(os.path.join(graphics_path, "body_topleft.png"))
+body_topright_img = load_and_scale(os.path.join(graphics_path, "body_topright.png"))
+body_bottomleft_img = load_and_scale(os.path.join(graphics_path, "body_bottomleft.png"))
+body_bottomright_img = load_and_scale(os.path.join(graphics_path, "body_bottomright.png"))
 
+# ----------------- Snake Drawing -----------------
+def draw_snake(snake_list, velocity_x, velocity_y):
+    """Draws the snake on the screen, selecting the correct sprites."""
+    if not snake_list:
+        return
+        
+    # Draw head based on velocity
+    if velocity_x > 0:
+        screen.blit(head_right_img, snake_list[0])
+    elif velocity_x < 0:
+        screen.blit(head_left_img, snake_list[0])
+    elif velocity_y > 0:
+        screen.blit(head_down_img, snake_list[0])
+    elif velocity_y < 0:
+        screen.blit(head_up_img, snake_list[0])
+    else:  # Draw a default head if not moving
+        screen.blit(head_right_img, snake_list[0])
+
+    # Draw body and tail
+    if len(snake_list) > 1:
+        for i in range(1, len(snake_list)):
+            current_segment = snake_list[i]
+            
+            # Draw tail
+            if i == len(snake_list) - 1:
+                prev_segment = snake_list[i-1]
+                if prev_segment[0] > current_segment[0]:
+                    screen.blit(tail_left_img, current_segment)
+                elif prev_segment[0] < current_segment[0]:
+                    screen.blit(tail_right_img, current_segment)
+                elif prev_segment[1] > current_segment[1]:
+                    screen.blit(tail_up_img, current_segment)
+                elif prev_segment[1] < current_segment[1]:
+                    screen.blit(tail_down_img, current_segment)
+            # Draw body segments
+            else:
+                prev_segment = snake_list[i-1]
+                next_segment = snake_list[i+1]
+                
+                # Straight segments
+                if prev_segment[0] == next_segment[0]:
+                    screen.blit(body_vertical_img, current_segment)
+                elif prev_segment[1] == next_segment[1]:
+                    screen.blit(body_horizontal_img, current_segment)
+                # Corner segments
+                else:
+                    if (prev_segment[0] < current_segment[0] and next_segment[1] < current_segment[1]) or \
+                       (next_segment[0] < current_segment[0] and prev_segment[1] < current_segment[1]):
+                        screen.blit(body_bottomright_img, current_segment)
+                    elif (prev_segment[0] < current_segment[0] and next_segment[1] > current_segment[1]) or \
+                         (next_segment[0] < current_segment[0] and prev_segment[1] > current_segment[1]):
+                        screen.blit(body_topright_img, current_segment)
+                    elif (prev_segment[0] > current_segment[0] and next_segment[1] < current_segment[1]) or \
+                         (next_segment[0] > current_segment[0] and prev_segment[1] < current_segment[1]):
+                        screen.blit(body_bottomleft_img, current_segment)
+                    elif (prev_segment[0] > current_segment[0] and next_segment[1] > current_segment[1]) or \
+                         (next_segment[0] > current_segment[0] and prev_segment[1] > current_segment[1]):
+                        screen.blit(body_topleft_img, current_segment)
+
+# ----------------- Game Loop -----------------
+def gameloop():
+    snake_x = 100
+    snake_y = 100
+    velocity_x = 0
+    velocity_y = 0
+    snake_list = [[snake_x, snake_y]]
+    snake_length = 1
+
+    apple_x = random.randrange(0, screen_width - 40, 40)
+    apple_y = random.randrange(0, screen_height - 40, 40)
+
+    game_over = False
+    game_started = False
+
+    while not game_over:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                quit()
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE or event.key == pygame.K_RETURN:
-                    waiting = False
-                elif event.key == pygame.K_q:
-                    pygame.quit()
-                    quit()
-
-def gameloop():
-#    """Main game loop"""
-    # Background music
-    pygame.mixer.music.load(bg_music)
-    pygame.mixer.music.play(-1)
-    pygame.mixer.music.set_volume(.6)
-
-    # Snake variables
-    snake_x, snake_y = 45, 55
-    velocity_x, velocity_y = 0, 0
-    snake_size = 20
-    snake_list = []
-    snake_length = 1
-    x = snake_x
-    y = snake_y
-    # Food
-    food_x = random.randint(20, screen_width // 2)
-    food_y = random.randint(20, screen_height // 2)
-
-    # Game settings
-    fps = 30
-    score = 0
-    init_velocity = 5
-    game_over = False
-
-    with open(r"../docs/Snake_High_Score.txt", "r") as f:
-        highscore = int(f.read())
-    
-    while True:
-        if game_over:
-            with open(r"../docs/Snake_High_Score.txt", "w") as f:
-                f.write(str(highscore))
-
-            game_window.blit(Outro_image, (0, 0))
-            pygame.display.update()
-
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    quit()
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_RETURN or event.key == pygame.K_SPACE:
-                        return  # restart fresh
-                    elif event.key == pygame.K_q:
-                        pygame.quit()
-                        quit()
-
-        else:
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    pygame.quit()
-                    quit()
-
-                if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_RIGHT:
-                        velocity_x, velocity_y = init_velocity, 0
-                    elif event.key == pygame.K_LEFT:
-                        velocity_x, velocity_y = -init_velocity, 0
-                    elif event.key == pygame.K_UP:
-                        velocity_y, velocity_x = -init_velocity, 0
-                    elif event.key == pygame.K_DOWN:
-                        velocity_y, velocity_x = init_velocity, 0
-
-            snake_x += velocity_x
-            snake_y += velocity_y
-
-            # Snake eats food
-            if abs(snake_x - food_x) < 15 and abs(snake_y - food_y) < 15:
-                beep_sound.play()
-                score += 1
-                food_x = random.randint(20, screen_width // 2)
-                food_y = random.randint(20, screen_height // 2)
-                snake_length += 5
-                if score > highscore:
-                    highscore = score
-                init_velocity += 0.2  # Increase difficulty
-
-            # Draw everything
-            game_window.blit(Background_image, (0, 0))
-            text_screen(f"Score: {score}  Highscore: {highscore}", white, 5, 5)
-            pygame.draw.rect(game_window, red, [food_x, food_y, snake_size, snake_size])
-
-            head = [snake_x, snake_y]
-            snake_list.append(head)
-
-            if len(snake_list) > snake_length:
-                del snake_list[0]
-
-            # Collisions
-            if head in snake_list[:-1] or snake_x < 0 or snake_x > screen_width or snake_y < 0 or snake_y > screen_height:
-                gameover_sound.play()
                 game_over = True
 
-            plot_snake(game_window, black, snake_list, snake_size)
-            pygame.display.update()
-            clock.tick(fps)
+            if event.type == pygame.KEYDOWN:
+                if not game_started:
+                    game_started = True
 
-# --- Run game in a controller loop ---
-while True:
-    welcome()
+                # These checks are now at the correct indentation level
+                if event.key == pygame.K_RIGHT and velocity_x == 0:
+                    velocity_x = 40
+                    velocity_y = 0
+                elif event.key == pygame.K_LEFT and velocity_x == 0:
+                    velocity_x = -40
+                    velocity_y = 0
+                elif event.key == pygame.K_UP and velocity_y == 0:
+                    velocity_y = -40
+                    velocity_x = 0
+                elif event.key == pygame.K_DOWN and velocity_y == 0:
+                    velocity_y = 40
+                    velocity_x = 0
+        
+        # This movement logic must run every frame
+        if game_started:
+            snake_x += velocity_x
+            snake_y += velocity_y
+            head = [snake_x, snake_y]
+            snake_list.insert(0, head)
+
+            if len(snake_list) > snake_length:
+                snake_list.pop()
+
+            if snake_x == apple_x and snake_y == apple_y:
+                snake_length += 1
+                apple_x = random.randrange(0, screen_width - 40, 40)
+                apple_y = random.randrange(0, screen_height - 40, 40)
+
+            if snake_x < 0 or snake_x >= screen_width or snake_y < 0 or snake_y >= screen_height:
+                game_over = True
+
+            if head in snake_list[1:]:
+                game_over = True
+
+        screen.fill(bg_color)
+        screen.blit(apple_img, (apple_x, apple_y))
+        
+        draw_snake(snake_list, velocity_x, velocity_y)
+
+        pygame.display.update()
+        clock.tick(fps)
+
+    pygame.quit()
+    quit()
+
+# ----------------- Run -----------------
+if __name__ == "__main__":
     gameloop()
