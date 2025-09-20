@@ -1,8 +1,10 @@
 import pygame
 import random
 import os
+import sys
 
 pygame.init()
+pygame.mixer.init()
 
 # ----------------- Screen Setup -----------------
 screen_width = 800
@@ -11,171 +13,296 @@ screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Snake Game with Sprites")
 
 clock = pygame.time.Clock()
-fps = 15
+fps = 10   # snake moves in steps, so 10 FPS is smooth enough
+
+# ----------------- Paths -----------------
+base_path = os.path.dirname(__file__)
+graphics_path = os.path.join(base_path, "snake_graphics")
+audio_path = os.path.join(base_path, "Snake_audio")
+
+# ----------------- Load Helpers -----------------
+def load_and_scale(path, size):
+    try:
+        image = pygame.image.load(path).convert_alpha()
+        return pygame.transform.scale(image, size)
+    except pygame.error as e:
+        print(f"Error loading image at {path}: {e}")
+        return pygame.Surface(size, pygame.SRCALPHA)
+
+def load_sound(path):
+    if os.path.exists(path):
+        return pygame.mixer.Sound(path)
+    return None
+
+# ----------------- Load Assets -----------------
+apple_img = load_and_scale(os.path.join(graphics_path, "apple.png"), (30, 30))
+head_up_img = load_and_scale(os.path.join(graphics_path, "head_up.png"), (30, 30))
+head_down_img = load_and_scale(os.path.join(graphics_path, "head_down.png"), (30, 30))
+head_right_img = load_and_scale(os.path.join(graphics_path, "head_right.png"), (30, 30))
+head_left_img = load_and_scale(os.path.join(graphics_path, "head_left.png"), (30, 30))
+body_img = load_and_scale(os.path.join(graphics_path, "body_horizontal.png"), (30, 30))
+
+intro_img = load_and_scale(os.path.join(graphics_path, "Intro.png"), (screen_width, screen_height))
+outro_img = load_and_scale(os.path.join(graphics_path, "Outro.png"), (screen_width, screen_height))
+
+bg1_img = load_and_scale(os.path.join(graphics_path, "bg.png"), (screen_width, screen_height))
+bg2_img = load_and_scale(os.path.join(graphics_path, "bg2.png"), (screen_width, screen_height))
+
+bg_music = os.path.join(audio_path, "Baground.wav")
+eat_sound = load_sound(os.path.join(audio_path, "Beep.wav"))
+go_sound = load_sound(os.path.join(audio_path, "GameOver.wav"))
 
 # ----------------- Colors -----------------
-white = (255, 255, 255)
-bg_color = (175, 215, 70) 
+COLOR_MAP = {
+    "Blue": (0, 128, 255),
+    "Green": (0, 200, 0),
+    "White": (255, 255, 255),
+    "Black": (0, 0, 0)
+}
 
-# ----------------- Asset Loader -----------------
-def load_and_scale(path, size=(40, 40)):
-    return pygame.transform.scale(pygame.image.load(path).convert_alpha(), size)
+# ----------------- Global Settings -----------------
+current_snake_color = "Blue"
+current_bg = "bg1"
 
-# Correct folder path
-graphics_path = os.path.join(os.path.dirname(__file__), "snake_graphics")
+# ----------------- Sprite Tinting -----------------
+def tint_image(image, color):
+    tinted = image.copy()
+    tint_surf = pygame.Surface(tinted.get_size(), pygame.SRCALPHA)
+    tint_surf.fill(color + (255,))  # full alpha to apply color
+    tinted.blit(tint_surf, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
+    return tinted
 
-# Apple
-apple_img = load_and_scale(os.path.join(graphics_path, "apple.png"))
+def apply_snake_color(color_name):
+    global head_up_img, head_down_img, head_left_img, head_right_img, body_img
+    color = COLOR_MAP[color_name]
 
-# Snake Head
-head_up_img = load_and_scale(os.path.join(graphics_path, "head_up.png"))
-head_down_img = load_and_scale(os.path.join(graphics_path, "head_down.png"))
-head_left_img = load_and_scale(os.path.join(graphics_path, "head_left.png"))
-head_right_img = load_and_scale(os.path.join(graphics_path, "head_right.png"))
+    # reload original images
+    up = load_and_scale(os.path.join(graphics_path, "head_up.png"), (30, 30))
+    down = load_and_scale(os.path.join(graphics_path, "head_down.png"), (30, 30))
+    left = load_and_scale(os.path.join(graphics_path, "head_left.png"), (30, 30))
+    right = load_and_scale(os.path.join(graphics_path, "head_right.png"), (30, 30))
+    body = load_and_scale(os.path.join(graphics_path, "body_horizontal.png"), (30, 30))
 
-# Snake Tail
-tail_up_img = load_and_scale(os.path.join(graphics_path, "tail_up.png"))
-tail_down_img = load_and_scale(os.path.join(graphics_path, "tail_down.png"))
-tail_left_img = load_and_scale(os.path.join(graphics_path, "tail_left.png"))
-tail_right_img = load_and_scale(os.path.join(graphics_path, "tail_right.png"))
+    # tint
+    head_up_img = tint_image(up, color)
+    head_down_img = tint_image(down, color)
+    head_left_img = tint_image(left, color)
+    head_right_img = tint_image(right, color)
+    body_img = tint_image(body, color)
 
-# Snake Body
-body_vertical_img = load_and_scale(os.path.join(graphics_path, "body_vertical.png"))
-body_horizontal_img = load_and_scale(os.path.join(graphics_path, "body_horizontal.png"))
-body_topleft_img = load_and_scale(os.path.join(graphics_path, "body_topleft.png"))
-body_topright_img = load_and_scale(os.path.join(graphics_path, "body_topright.png"))
-body_bottomleft_img = load_and_scale(os.path.join(graphics_path, "body_bottomleft.png"))
-body_bottomright_img = load_and_scale(os.path.join(graphics_path, "body_bottomright.png"))
+apply_snake_color(current_snake_color)
 
 # ----------------- Snake Drawing -----------------
-def draw_snake(snake_list, velocity_x, velocity_y):
-    """Draws the snake on the screen, selecting the correct sprites."""
+def draw_snake(snake_list, direction):
     if not snake_list:
         return
-        
-    # Draw head based on velocity
-    if velocity_x > 0:
-        screen.blit(head_right_img, snake_list[0])
-    elif velocity_x < 0:
-        screen.blit(head_left_img, snake_list[0])
-    elif velocity_y > 0:
-        screen.blit(head_down_img, snake_list[0])
-    elif velocity_y < 0:
-        screen.blit(head_up_img, snake_list[0])
-    else:  # Draw a default head if not moving
-        screen.blit(head_right_img, snake_list[0])
+    
+    # draw body if length > 1
+    for block in snake_list[:-1]:
+        screen.blit(body_img, (block[0], block[1]))
 
-    # Draw body and tail
-    if len(snake_list) > 1:
-        for i in range(1, len(snake_list)):
-            current_segment = snake_list[i]
-            
-            # Draw tail
-            if i == len(snake_list) - 1:
-                prev_segment = snake_list[i-1]
-                if prev_segment[0] > current_segment[0]:
-                    screen.blit(tail_left_img, current_segment)
-                elif prev_segment[0] < current_segment[0]:
-                    screen.blit(tail_right_img, current_segment)
-                elif prev_segment[1] > current_segment[1]:
-                    screen.blit(tail_up_img, current_segment)
-                elif prev_segment[1] < current_segment[1]:
-                    screen.blit(tail_down_img, current_segment)
-            # Draw body segments
-            else:
-                prev_segment = snake_list[i-1]
-                next_segment = snake_list[i+1]
-                
-                # Straight segments
-                if prev_segment[0] == next_segment[0]:
-                    screen.blit(body_vertical_img, current_segment)
-                elif prev_segment[1] == next_segment[1]:
-                    screen.blit(body_horizontal_img, current_segment)
-                # Corner segments
-                else:
-                    if (prev_segment[0] < current_segment[0] and next_segment[1] < current_segment[1]) or \
-                       (next_segment[0] < current_segment[0] and prev_segment[1] < current_segment[1]):
-                        screen.blit(body_bottomright_img, current_segment)
-                    elif (prev_segment[0] < current_segment[0] and next_segment[1] > current_segment[1]) or \
-                         (next_segment[0] < current_segment[0] and prev_segment[1] > current_segment[1]):
-                        screen.blit(body_topright_img, current_segment)
-                    elif (prev_segment[0] > current_segment[0] and next_segment[1] < current_segment[1]) or \
-                         (next_segment[0] > current_segment[0] and prev_segment[1] < current_segment[1]):
-                        screen.blit(body_bottomleft_img, current_segment)
-                    elif (prev_segment[0] > current_segment[0] and next_segment[1] > current_segment[1]) or \
-                         (next_segment[0] > current_segment[0] and prev_segment[1] > current_segment[1]):
-                        screen.blit(body_topleft_img, current_segment)
+    # always draw head
+    head = snake_list[-1]
+    if direction == "up":
+        screen.blit(head_up_img, head)
+    elif direction == "down":
+        screen.blit(head_down_img, head)
+    elif direction == "left":
+        screen.blit(head_left_img, head)
+    elif direction == "right":
+        screen.blit(head_right_img, head)
+
+
+# ----------------- Menu Helpers -----------------
+font = pygame.font.SysFont(None, 48)
+
+def draw_text(text, pos, selected=False):
+    color = (255, 255, 0) if selected else (255, 255, 255)
+    render = font.render(text, True, color)
+    rect = render.get_rect(center=pos)
+    screen.blit(render, rect)
+    return rect
+
+def play_music():
+    if os.path.exists(bg_music):
+        pygame.mixer.music.load(bg_music)
+        pygame.mixer.music.play(-1)
+
+# ----------------- Intro Menu -----------------
+def intro_menu():
+    play_music()
+    options = ["Play", "Options", "Quit"]
+    selected = 0
+
+    while True:
+        screen.blit(intro_img, (0, 0))
+        rects = []
+        for i, opt in enumerate(options):
+            rects.append(draw_text(opt, (screen_width//2, 300 + i*60), i == selected))
+
+        pygame.display.update()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    selected = (selected - 1) % len(options)
+                elif event.key == pygame.K_DOWN:
+                    selected = (selected + 1) % len(options)
+                elif event.key == pygame.K_RETURN:
+                    if options[selected] == "Play":
+                        return "play"
+                    elif options[selected] == "Options":
+                        return "options"
+                    elif options[selected] == "Quit":
+                        pygame.quit(); sys.exit()
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                for i, r in enumerate(rects):
+                    if r.collidepoint(event.pos):
+                        if options[i] == "Play":
+                            return "play"
+                        elif options[i] == "Options":
+                            return "options"
+                        elif options[i] == "Quit":
+                            pygame.quit(); sys.exit()
+
+# ----------------- Options Menu -----------------
+def options_menu():
+    global current_snake_color, current_bg
+    selected = 0
+
+    while True:
+        screen.fill((0,0,0))
+        rects =[]
+        options = [
+            "Snake Color: " + current_snake_color,
+            "Background: " + current_bg,
+            "Back"
+        ]
+
+
+        pygame.display.update()
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    selected = (selected - 1) % len(options)
+                elif event.key == pygame.K_DOWN:
+                    selected = (selected + 1) % len(options)
+                elif event.key == pygame.K_RETURN:
+                    if options[selected].startswith("Snake Color"):
+                        # cycle color
+                        colors = list(COLOR_MAP.keys())
+                        idx = colors.index(current_snake_color)
+                        current_snake_color = colors[(idx+1)%len(colors)]
+                        apply_snake_color(current_snake_color)
+                        options[0] = "Snake Color: " + current_snake_color
+                    elif options[selected].startswith("Background"):
+                        current_bg = "bg2" if current_bg == "bg1" else "bg1"
+                        options[1] = "Background: " + current_bg
+                    elif options[selected] == "Back":
+                        return
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                for i, r in enumerate(rects):
+                    if r.collidepoint(event.pos):
+                        if options[i].startswith("Snake Color"):
+                            colors = list(COLOR_MAP.keys())
+                            idx = colors.index(current_snake_color)
+                            current_snake_color = colors[(idx+1)%len(colors)]
+                            apply_snake_color(current_snake_color)
+                            options[0] = "Snake Color: " + current_snake_color
+                        elif options[i].startswith("Background"):
+                            current_bg = "bg2" if current_bg == "bg1" else "bg1"
+                            options[1] = "Background: " + current_bg
+                        elif options[i] == "Back":
+                            return
+
+# ----------------- Game Over Screen -----------------
+def game_over_screen():
+    pygame.mixer.music.stop()
+    if go_sound: go_sound.play()
+    screen.blit(outro_img, (0, 0))
+    pygame.display.update()
+    waiting = True
+    while waiting:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit(); sys.exit()
+            if event.type == pygame.KEYDOWN:
+                waiting = False
 
 # ----------------- Game Loop -----------------
 def gameloop():
-    snake_x = 100
-    snake_y = 100
-    velocity_x = 0
-    velocity_y = 0
+    snake_x, snake_y = (screen_width//2),(screen_height//2)
+    x_velocity, y_velocity = 30, 0  # start moving right
+    direction = "right"
+
     snake_list = [[snake_x, snake_y]]
     snake_length = 1
 
-    apple_x = random.randrange(0, screen_width - 40, 40)
-    apple_y = random.randrange(0, screen_height - 40, 40)
+    apple_x = random.randrange(0, screen_width - 30, 30)
+    apple_y = random.randrange(0, screen_height - 30, 30)
 
     game_over = False
-    game_started = False
 
     while not game_over:
+        bg_img = bg1_img if current_bg == "bg1" else bg2_img
+
+
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                game_over = True
-
+                pygame.quit(); sys.exit()
             if event.type == pygame.KEYDOWN:
-                if not game_started:
-                    game_started = True
+                if event.key == pygame.K_LEFT and x_velocity == 0:
+                    x_velocity, y_velocity, direction = -30, 0, "left"
+                elif event.key == pygame.K_RIGHT and x_velocity == 0:
+                    x_velocity, y_velocity, direction = 30, 0, "right"
+                elif event.key == pygame.K_UP and y_velocity == 0:
+                    x_velocity, y_velocity, direction = 0, -30, "up"
+                elif event.key == pygame.K_DOWN and y_velocity == 0:
+                    x_velocity, y_velocity, direction = 0, 30, "down"
 
-                # These checks are now at the correct indentation level
-                if event.key == pygame.K_RIGHT and velocity_x == 0:
-                    velocity_x = 40
-                    velocity_y = 0
-                elif event.key == pygame.K_LEFT and velocity_x == 0:
-                    velocity_x = -40
-                    velocity_y = 0
-                elif event.key == pygame.K_UP and velocity_y == 0:
-                    velocity_y = -40
-                    velocity_x = 0
-                elif event.key == pygame.K_DOWN and velocity_y == 0:
-                    velocity_y = 40
-                    velocity_x = 0
-        
-        # This movement logic must run every frame
-        if game_started:
-            snake_x += velocity_x
-            snake_y += velocity_y
-            head = [snake_x, snake_y]
-            snake_list.insert(0, head)
+        snake_x += x_velocity
+        snake_y += y_velocity
+        head = [snake_x, snake_y]
+        snake_list.append(head)
 
-            if len(snake_list) > snake_length:
-                snake_list.pop()
+        if len(snake_list) > snake_length:
+            del snake_list[0]
 
-            if snake_x == apple_x and snake_y == apple_y:
-                snake_length += 1
-                apple_x = random.randrange(0, screen_width - 40, 40)
-                apple_y = random.randrange(0, screen_height - 40, 40)
+        # eating apple
+        snake_rect = pygame.Rect(snake_x, snake_y, 30, 30)
+        apple_rect = pygame.Rect(apple_x, apple_y, 30, 30)
+        if snake_rect.colliderect(apple_rect):
+            if eat_sound: eat_sound.play()
+            snake_length += 1
+            apple_x = random.randrange(0, screen_width // 30) * 30
+            apple_y = random.randrange(0, screen_height // 30) * 30
 
-            if snake_x < 0 or snake_x >= screen_width or snake_y < 0 or snake_y >= screen_height:
-                game_over = True
 
-            if head in snake_list[1:]:
-                game_over = True
+        # wall collision
+        if snake_x < 0 or snake_x >= screen_width or snake_y < 0 or snake_y >= screen_height:
+            game_over = True
 
-        screen.fill(bg_color)
+        # self collision
+        if head in snake_list[:-1]:
+            game_over = True
+
+        # draw
+        screen.blit(bg_img, (0, 0))
         screen.blit(apple_img, (apple_x, apple_y))
-        
-        draw_snake(snake_list, velocity_x, velocity_y)
-
+        draw_snake(snake_list, direction)
         pygame.display.update()
         clock.tick(fps)
 
-    pygame.quit()
-    quit()
+    game_over_screen()
 
-# ----------------- Run -----------------
+# ----------------- Main -----------------
 if __name__ == "__main__":
-    gameloop()
+    while True:
+        choice = intro_menu()
+        if choice == "play":
+            gameloop()
+        elif choice == "options":
+            options_menu()
