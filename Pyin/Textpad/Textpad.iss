@@ -13,7 +13,7 @@ DefaultDirName={autopf}\Textpad
 
 OutputDir=.
 OutputBaseFilename=TextpadSetup
-;SetupIconFile=Calculator.ico
+SetupIconFile=Textpad.ico
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=lowest

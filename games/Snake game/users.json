@@ -1,0 +1,23 @@
+{
+    "users": {
+        "Abhigyan Deepak": {
+            "highscore": 2,
+            "snake_color": "Blue",
+            "background": "bg1",
+            "window_size": [
+                800,
+                600
+            ]
+        },
+        "Abhinav Deepak": {
+            "highscore": 0,
+            "snake_color": "Blue",
+            "background": "bg1",
+            "window_size": [
+                800,
+                600
+            ]
+        }
+    },
+    "last_user": "Abhigyan Deepak"
+}
