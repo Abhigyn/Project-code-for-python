@@ -1,8 +1,8 @@
 import pandas as pd
 import datetime
 
-
-
+Gamil_ID = ""
+Gamil_PSWD = ""
 def sendEmail(to,sub,msg):
     pass
 
@@ -18,5 +18,10 @@ if __name__ == "__main__":
         if (today == bday) and YearNow not in str(item["Year"]):
             sendEmail(item["Email"],"Happy Birthday",item["Dialogue"])
             writeIND.append(index)
+    if writeIND == None:
+        for i in writeIND:
+            yr = df.loc[i,"Year"]
+            df.loc[i,"Year"] = str(yr) + "," + str(YearNow)
+            df.to_excel(r"../docs/data.xlsx",index=False)
 
 

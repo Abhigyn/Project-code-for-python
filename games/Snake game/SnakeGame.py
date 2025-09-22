@@ -337,7 +337,7 @@ def game_over_screen(score):
 
 def gameloop():
     snake_x, snake_y = screen_width // 2, screen_height // 2
-    x_velocity, y_velocity = 0, 0
+    x_velocity, y_velocity = 30, 0
     direction = "right"
     snake_list, snake_length = [[snake_x, snake_y]], 1
     apple_x = random.randrange(0, screen_width - 30, 30)
