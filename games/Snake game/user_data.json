@@ -2,5 +2,13 @@
     "Abhigyan Deepak": {
         "password": "123456789",
         "highscore": 0
+    },
+    "chiku": {
+        "password": "chikuchikuchikuchiku",
+        "highscore": 0
+    },
+    "chiku ": {
+        "password": "chiku156",
+        "highscore": 0
     }
 }
