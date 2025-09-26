@@ -7,20 +7,22 @@ import json
 pygame.init()
 pygame.mixer.init()
 
-# ----------------- Screen Setup -----------------
 screen_width = 800
 screen_height = 600
 screen = pygame.display.set_mode((screen_width, screen_height))
 pygame.display.set_caption("Snake Game")
 
-# ----------------- Paths -----------------
 base_path = os.path.dirname(os.path.abspath(__file__))
-graphics_path = os.path.join(base_path, "snake_graphics")
-audio_path = os.path.join(base_path, "Snake_audio")
 
-# <-- NEW: Set the game window icon
+def resource_path(relative_path):
+    try:
+        res_base_path = sys._MEIPASS
+    except Exception:
+        res_base_path = os.path.abspath(".")
+    return os.path.join(res_base_path, relative_path)
+
 try:
-    icon_path = os.path.join(graphics_path, "game_icon.ico") # Make sure you have game_icon.png here
+    icon_path = resource_path(os.path.join("snake_graphics", "game_icon.ico"))
     icon_img = pygame.image.load(icon_path)
     pygame.display.set_icon(icon_img)
 except pygame.error as e:
@@ -28,9 +30,9 @@ except pygame.error as e:
 
 clock = pygame.time.Clock()
 fps = 10
-
-# ----------------- User Data Management -----------------
 USER_DATA_FILE = os.path.join(base_path, "user_data.json")
+CONFIG_FILE = os.path.join(base_path, "config.json") 
+
 current_user = None
 user_data = {}
 
@@ -55,7 +57,24 @@ def update_highscore(username, score):
             user_data[username]['highscore'] = score
             save_user_data()
 
-# ----------------- Load Helpers -----------------
+def save_last_user(username):
+    """Saves the last logged-in username to the config file."""
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump({"last_user": username}, f)
+
+def load_last_user():
+    """Loads the last logged-in username from the config file."""
+    global current_user
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, 'r') as f:
+                config = json.load(f)
+                last_user = config.get("last_user")
+                if last_user and last_user in user_data:
+                    current_user = last_user
+        except (json.JSONDecodeError, FileNotFoundError):
+            current_user = None
+
 def load_and_scale(path, size):
     try:
         image = pygame.image.load(path).convert_alpha()
@@ -72,40 +91,38 @@ def load_sound(path):
     print(f"Warning: Sound file not found at {path}")
     return None
 
-# ----------------- Load Assets -----------------
-apple_img = load_and_scale(os.path.join(graphics_path, "apple.png"), (30, 30))
-head_up_img = load_and_scale(os.path.join(graphics_path, "head_up.png"), (30, 30))
-head_down_img = load_and_scale(os.path.join(graphics_path, "head_down.png"), (30, 30))
-head_right_img = load_and_scale(os.path.join(graphics_path, "head_right.png"), (30, 30))
-head_left_img = load_and_scale(os.path.join(graphics_path, "head_left.png"), (30, 30))
-tail_up_img = load_and_scale(os.path.join(graphics_path, "tail_up.png"), (30, 30))
-tail_down_img = load_and_scale(os.path.join(graphics_path, "tail_down.png"), (30, 30))
-tail_right_img = load_and_scale(os.path.join(graphics_path, "tail_right.png"), (30, 30))
-tail_left_img = load_and_scale(os.path.join(graphics_path, "tail_left.png"), (30, 30))
-body_horizontal_img = load_and_scale(os.path.join(graphics_path, "body_horizontal.png"), (30, 30))
-body_vertical_img = load_and_scale(os.path.join(graphics_path, "body_vertical.png"), (30, 30))
-body_topright_img = load_and_scale(os.path.join(graphics_path, "body_topright.png"), (30, 30))
-body_topleft_img = load_and_scale(os.path.join(graphics_path, "body_topleft.png"), (30, 30))
-body_bottomright_img = load_and_scale(os.path.join(graphics_path, "body_bottomright.png"), (30, 30))
-body_bottomleft_img = load_and_scale(os.path.join(graphics_path, "body_bottomleft.png"), (30, 30))
-intro_img = load_and_scale(os.path.join(graphics_path, "Intro.png"), (screen_width, screen_height))
-outro_img = load_and_scale(os.path.join(graphics_path, "Outro.png"), (screen_width, screen_height))
-bg1_img = load_and_scale(os.path.join(graphics_path, "bg.png"), (screen_width, screen_height))
-bg2_img = load_and_scale(os.path.join(graphics_path, "bg2.png"), (screen_width, screen_height))
-bg_music = os.path.join(audio_path, "Baground.mp3")
-eat_sound = load_sound(os.path.join(audio_path, "Beep.mp3"))
-go_sound = load_sound(os.path.join(audio_path, "GameOver.mp3"))
+apple_img = load_and_scale(resource_path(os.path.join("snake_graphics", "apple.png")), (30, 30))
+head_up_img_orig = load_and_scale(resource_path(os.path.join("snake_graphics", "head_up.png")), (30, 30))
+head_down_img_orig = load_and_scale(resource_path(os.path.join("snake_graphics", "head_down.png")), (30, 30))
+head_right_img_orig = load_and_scale(resource_path(os.path.join("snake_graphics", "head_right.png")), (30, 30))
+head_left_img_orig = load_and_scale(resource_path(os.path.join("snake_graphics", "head_left.png")), (30, 30))
+tail_up_img_orig = load_and_scale(resource_path(os.path.join("snake_graphics", "tail_up.png")), (30, 30))
+tail_down_img_orig = load_and_scale(resource_path(os.path.join("snake_graphics", "tail_down.png")), (30, 30))
+tail_right_img_orig = load_and_scale(resource_path(os.path.join("snake_graphics", "tail_right.png")), (30, 30))
+tail_left_img_orig = load_and_scale(resource_path(os.path.join("snake_graphics", "tail_left.png")), (30, 30))
+body_horizontal_img_orig = load_and_scale(resource_path(os.path.join("snake_graphics", "body_horizontal.png")), (30, 30))
+body_vertical_img_orig = load_and_scale(resource_path(os.path.join("snake_graphics", "body_vertical.png")), (30, 30))
+body_topright_img_orig = load_and_scale(resource_path(os.path.join("snake_graphics", "body_topright.png")), (30, 30))
+body_topleft_img_orig = load_and_scale(resource_path(os.path.join("snake_graphics", "body_topleft.png")), (30, 30))
+body_bottomright_img_orig = load_and_scale(resource_path(os.path.join("snake_graphics", "body_bottomright.png")), (30, 30))
+body_bottomleft_img_orig = load_and_scale(resource_path(os.path.join("snake_graphics", "body_bottomleft.png")), (30, 30))
 
-# ----------------- Colors & Settings -----------------
+intro_img = load_and_scale(resource_path(os.path.join("snake_graphics", "Intro.png")), (screen_width, screen_height))
+outro_img = load_and_scale(resource_path(os.path.join("snake_graphics", "Outro.png")), (screen_width, screen_height))
+bg1_img = load_and_scale(resource_path(os.path.join("snake_graphics", "bg.png")), (screen_width, screen_height))
+bg2_img = load_and_scale(resource_path(os.path.join("snake_graphics", "bg2.png")), (screen_width, screen_height))
+bg_music = resource_path(os.path.join("Snake_audio", "Baground.mp3"))
+eat_sound = load_sound(resource_path(os.path.join("Snake_audio", "Beep.mp3")))
+go_sound = load_sound(resource_path(os.path.join("Snake_audio", "GameOver.mp3")))
+
 COLOR_MAP = {"Blue": (0, 128, 255), "Green": (0, 200, 0), "White": (255, 255, 255), "Black": (0, 0, 0), "Yellow": (255, 255, 0)}
 current_snake_color = "Blue"
 current_bg = "bg1"
 
-# ----------------- Sprite Tinting -----------------
 def tint_image(image, color):
     tinted = image.copy()
     tint_surf = pygame.Surface(tinted.get_size(), pygame.SRCALPHA)
-    tint_surf.fill(color + (128,))
+    tint_surf.fill(color + (128,)) # Add alpha to the color
     tinted.blit(tint_surf, (0, 0), special_flags=pygame.BLEND_RGBA_MULT)
     return tinted
 
@@ -116,24 +133,23 @@ def apply_snake_color(color_name):
     global body_topleft_img, body_topright_img, body_bottomleft_img, body_bottomright_img
 
     color = COLOR_MAP.get(color_name, COLOR_MAP["Blue"])
-    head_up_img = tint_image(load_and_scale(os.path.join(graphics_path, "head_up.png"), (30,30)), color)
-    head_down_img = tint_image(load_and_scale(os.path.join(graphics_path, "head_down.png"), (30,30)), color)
-    head_left_img = tint_image(load_and_scale(os.path.join(graphics_path, "head_left.png"), (30,30)), color)
-    head_right_img = tint_image(load_and_scale(os.path.join(graphics_path, "head_right.png"), (30,30)), color)
-    tail_up_img = tint_image(load_and_scale(os.path.join(graphics_path, "tail_up.png"), (30,30)), color)
-    tail_down_img = tint_image(load_and_scale(os.path.join(graphics_path, "tail_down.png"), (30,30)), color)
-    tail_left_img = tint_image(load_and_scale(os.path.join(graphics_path, "tail_left.png"), (30,30)), color)
-    tail_right_img = tint_image(load_and_scale(os.path.join(graphics_path, "tail_right.png"), (30,30)), color)
-    body_horizontal_img = tint_image(load_and_scale(os.path.join(graphics_path, "body_horizontal.png"), (30,30)), color)
-    body_vertical_img = tint_image(load_and_scale(os.path.join(graphics_path, "body_vertical.png"), (30,30)), color)
-    body_topleft_img = tint_image(load_and_scale(os.path.join(graphics_path, "body_topleft.png"), (30,30)), color)
-    body_topright_img = tint_image(load_and_scale(os.path.join(graphics_path, "body_topright.png"), (30,30)), color)
-    body_bottomleft_img = tint_image(load_and_scale(os.path.join(graphics_path, "body_bottomleft.png"), (30,30)), color)
-    body_bottomright_img = tint_image(load_and_scale(os.path.join(graphics_path, "body_bottomright.png"), (30,30)), color)
+    head_up_img = tint_image(head_up_img_orig, color)
+    head_down_img = tint_image(head_down_img_orig, color)
+    head_left_img = tint_image(head_left_img_orig, color)
+    head_right_img = tint_image(head_right_img_orig, color)
+    tail_up_img = tint_image(tail_up_img_orig, color)
+    tail_down_img = tint_image(tail_down_img_orig, color)
+    tail_left_img = tint_image(tail_left_img_orig, color)
+    tail_right_img = tint_image(tail_right_img_orig, color)
+    body_horizontal_img = tint_image(body_horizontal_img_orig, color)
+    body_vertical_img = tint_image(body_vertical_img_orig, color)
+    body_topleft_img = tint_image(body_topleft_img_orig, color)
+    body_topright_img = tint_image(body_topright_img_orig, color)
+    body_bottomleft_img = tint_image(body_bottomleft_img_orig, color)
+    body_bottomright_img = tint_image(body_bottomright_img_orig, color)
 
 apply_snake_color(current_snake_color)
 
-# ----------------- Snake Drawing -----------------
 def draw_snake(snake_list, direction):
     if not snake_list:
         return
@@ -167,7 +183,7 @@ def draw_snake(snake_list, direction):
                  (prev_block[1] > current_block[1] and next_block[0] > current_block[0]):
                 screen.blit(body_bottomright_img, current_block)
 
-# ----------------- Menus, Game Loop, and Main -----------------
+
 font = pygame.font.SysFont(None, 48)
 input_font = pygame.font.SysFont(None, 36)
 
@@ -222,7 +238,9 @@ def login_screen():
                 elif pass_box.collidepoint(event.pos): active_box = 'pass'
                 if buttons["Login"].collidepoint(event.pos):
                     if username in user_data and user_data[username]['password'] == password:
-                        current_user = username; return
+                        current_user = username
+                        save_last_user(current_user) # <-- MODIFIED: Save user on login
+                        return
                     else: message = "Invalid username or password"
                 elif buttons["Register"].collidepoint(event.pos):
                     if username and password:
@@ -233,7 +251,9 @@ def login_screen():
                             username, password = "", ""
                     else: message = "Enter username and password"
                 elif buttons["Guest"].collidepoint(event.pos):
-                    current_user = None; return
+                    current_user = None
+                    save_last_user(None) # <-- MODIFIED: Clear last user for guest
+                    return
             if event.type == pygame.KEYDOWN and active_box:
                 if event.key == pygame.K_BACKSPACE:
                     if active_box == 'user': username = username[:-1]
@@ -247,7 +267,7 @@ def login_screen():
 def intro_menu():
     global current_user
     play_music()
-    options = ["Play", "Options", "Highscores", "Change Account", "Quit"] # <-- MODIFIED
+    options = ["Play", "Options", "Highscores", "Change Account", "Quit"]
     selected = 0
     while True:
         screen.blit(intro_img, (0, 0))
@@ -300,9 +320,7 @@ def options_menu():
         pygame.display.update()
         clock.tick(30)
 
-# <-- NEW FUNCTION
 def highscore_screen():
-    """Displays a ranked list of the top 10 highscores."""
     scores = [(username, data.get('highscore', 0)) for username, data in user_data.items()]
     sorted_scores = sorted(scores, key=lambda item: item[1], reverse=True)
     waiting = True
@@ -382,12 +400,20 @@ def gameloop():
 
 if __name__ == "__main__":
     load_user_data()
+    load_last_user()
+    
     while True:
-        login_screen()
+        if current_user is None:
+            login_screen()
         while True:
             choice = intro_menu()
             if choice == "play": gameloop()
             elif choice == "options": options_menu()
-            elif choice == "highscores": highscore_screen() # <-- MODIFIED
-            elif choice == "change_account": current_user = None; break
-            elif choice == "quit": pygame.quit(); sys.exit()
+            elif choice == "highscores": highscore_screen()
+            elif choice == "change_account":
+                current_user = None
+                save_last_user(None) 
+                break
+            elif choice == "quit":
+                pygame.quit()
+                sys.exit()
