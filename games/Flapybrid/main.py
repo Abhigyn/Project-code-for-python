@@ -7,11 +7,12 @@ from pygame.locals import *
 pygame.init()
 pygame.mixer.init()
 
-# Game setup
+# Game setup - FIXED SIZE
 FPS = 32
 screen_width = 289
 screen_height = 511
-screen = pygame.display.set_mode((screen_width, screen_height))
+# Set a FIXED-SIZE screen
+screen = pygame.display.set_mode((screen_width, screen_height)) 
 GROUNDY = screen_height * 0.8
 GAME_SPRITE = {}
 GAME_SOUND = {}
@@ -53,7 +54,7 @@ def Welcome():
 def getRandomPipe():
     """Generates the positions for a new pair of pipes."""
     pipe_height = GAME_SPRITE["PIPE"][0].get_height()
-    gap_size = 100  # Gap between the upper and lower pipes
+    gap_size = 100  # Fixed gap between the upper and lower pipes
 
 
     lower_pipe_y = random.randrange(int(screen_height / 3), int(GROUNDY - 50))
@@ -62,27 +63,37 @@ def getRandomPipe():
     pipeX = screen_width + 10
     pipe = [
         {"x": pipeX, "y": upper_pipe_y},  # Upper Pipe
-        {"x": pipeX, "y": lower_pipe_y}   # Lower Pipe
+        {"x": pipeX, "y": lower_pipe_y}  # Lower Pipe
     ]
     return pipe
 
 def isCollide(PLAYERX, PLAYERY, upper_pipes, lower_pipes):
-   if PLAYERY> GROUNDY - 25 or PLAYERY<0:
-      GAME_SOUND["GameOver"].play()
-      return True
-   
-   for pipe in upper_pipes:
-       pipeheight = GAME_SPRITE["PIPE"][0].get_width()
-   if (PLAYERY< pipeheight + pipe["y"] and abs(PLAYERX - pipe["x"]) < GAME_SPRITE["PIPE"][0].get_width()):
-      GAME_SOUND["GameOver"].play()
-      return True
-   for pipe in lower_pipes:
-       if (PLAYERY + GAME_SPRITE["PLAYER"].get_height() > pipe["y"] and abs(PLAYERX - pipe["x"]) < GAME_SPRITE["PIPE"][0].get_width()):
-           GAME_SOUND["GameOver"].play()
-           return True
+    player_height = GAME_SPRITE["PLAYER"].get_height()
+    player_width = GAME_SPRITE["PLAYER"].get_width()
+    pipe_width = GAME_SPRITE["PIPE"][0].get_width()
+
+    # Collision with ground or ceiling
+    if PLAYERY > GROUNDY - player_height or PLAYERY < 0:
+        GAME_SOUND["GameOver"].play()
+        return True
+    
+    for pipe in upper_pipes:
+        pipe_height = GAME_SPRITE["PIPE"][0].get_height()
+        # Collision check with upper pipe
+        if (PLAYERY < pipe_height + pipe["y"] and 
+            abs(PLAYERX - pipe["x"]) < pipe_width):
+            GAME_SOUND["GameOver"].play()
+            return True
+            
+    for pipe in lower_pipes:
+        # Collision check with lower pipe
+        if (PLAYERY + player_height > pipe["y"] and 
+            abs(PLAYERX - pipe["x"]) < pipe_width):
+            GAME_SOUND["GameOver"].play()
+            return True
 
 
-   return False
+    return False
 
 def maingame():
     SCORE = 0
@@ -178,25 +189,23 @@ def maingame():
 
 if __name__ == "__main__":
     pygame.display.set_caption("Flappy Bird by Abhigyan")
+    
+    GAME_SPRITE["numbers"] = tuple(
+        pygame.image.load(f"gallery/sprites/{i}.png").convert_alpha() 
+        for i in range(10)
+    )
 
-    # Load images
-    GAME_SPRITE["numbers"] = tuple(pygame.image.load(f"gallery/sprites/{i}.png").convert_alpha() for i in range(10))
     GAME_SPRITE["message"] = pygame.image.load("gallery/sprites/message.png").convert_alpha()
+
     GAME_SPRITE["BASE"] = pygame.image.load("gallery/sprites/base.png").convert_alpha()
     pipe_image = pygame.image.load(PIPE).convert_alpha()
     GAME_SPRITE["PIPE"] = (pygame.transform.rotate(pipe_image, 180), pipe_image)
     GAME_SPRITE["PLAYER"] = pygame.image.load(PLAYER).convert_alpha()
-    GAME_SPRITE["BACKGROUND"] = pygame.image.load(BACKGROUND).convert_alpha()
+    GAME_SPRITE["BACKGROUND"] = pygame.image.load(BACKGROUND).convert() 
 
     GAME_SOUND["wing"] = pygame.mixer.Sound("gallery/audio/wing.wav")
-    GAME_SOUND["GameOver"] = pygame.mixer.Sound("gallery/audio/GameOver.wav")
-    GAME_SOUND["point"] = pygame.mixer.Sound("gallery/audio/point.wav")
-    GAME_SOUND["Score"] = pygame.mixer.Sound("gallery/audio/Score.wav")
-    GAME_SOUND["Swoosh"] = pygame.mixer.Sound("gallery/audio/Swoosh.wav")
     
-        
-
-
+    
     # Main game loop
     while True:
         Welcome()
