@@ -4,7 +4,7 @@ import pygame
 from pygame.locals import *
 
 # Initialize all pygame modules
-pygame.init()
+pygame.init()     
 pygame.mixer.init()
 
 # Game setup - FIXED SIZE
@@ -22,7 +22,6 @@ PLAYER = r"gallery/sprites/bird.png"
 BACKGROUND = r"gallery/sprites/background.png"
 PIPE = r"gallery/sprites/pipe.png"
 
-# FIX: Moved FPSCLOCK to the global scope so it can be accessed by all functions
 FPSCLOCK = pygame.time.Clock()
 
 
@@ -54,7 +53,7 @@ def Welcome():
 def getRandomPipe():
     """Generates the positions for a new pair of pipes."""
     pipe_height = GAME_SPRITE["PIPE"][0].get_height()
-    gap_size = 100  # Fixed gap between the upper and lower pipes
+    gap_size = 100
 
 
     lower_pipe_y = random.randrange(int(screen_height / 3), int(GROUNDY - 50))
@@ -99,7 +98,10 @@ def maingame():
     SCORE = 0
     PLAYERX = int(screen_width / 5)
     PLAYERY = int(screen_height / 2)
-    basex = 0
+    basex = -((-basex + 4) % GAME_SPRITE["BASE"].get_width())
+    screen.blit(GAME_SPRITE["BASE"], (basex, GROUNDY))
+    screen.blit(GAME_SPRITE["BASE"], (basex + GAME_SPRITE["BASE"].get_width(), GROUNDY))
+
 
     newPipe1 = getRandomPipe()
     newPipe2 = getRandomPipe()
@@ -204,6 +206,8 @@ if __name__ == "__main__":
     GAME_SPRITE["BACKGROUND"] = pygame.image.load(BACKGROUND).convert() 
 
     GAME_SOUND["wing"] = pygame.mixer.Sound("gallery/audio/wing.wav")
+    GAME_SOUND["Score"] = pygame.mixer.Sound("gallery/audio/score.wav")
+    GAME_SOUND["GameOver"] = pygame.mixer.Sound("gallery/audio/GameOver.wav")
     
     
     # Main game loop

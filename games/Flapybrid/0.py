@@ -1,47 +1,61 @@
-from PIL import Image, ImageDraw, ImageFont
-import zipfile
 import os
+from PIL import Image
 
-# Params
-width, height = 25, 36
-digits = "0123456789"
+# --- Configuration ---
+SPRITE_SHEET_PATH = "flappy_spritesheet.png"
+OUTPUT_FOLDER = "sprites"
 
-# Make output folder
-out_dir = "digits_output"
-os.makedirs(out_dir, exist_ok=True)
+# Define the coordinates for each sprite within the sheet
+# The format is: (left, top, right, bottom)
+SPRITES_TO_EXTRACT = {
+    "background.png": (0, 0, 288, 512),
+    "base.png":       (584, 0, 920, 112),
+    "pipe.png":       (552, 0, 604, 320),
+    "message.png":    (584, 116, 770, 174),
+    "bird1.png":      (62, 982, 96, 1006), # Mid-flap
+    "bird2.png":      (118, 982, 152, 1006),# Up-flap
+    "bird3.png":      (6, 982, 40, 1006),  # Down-flap
+}
 
-# Try to load a TTF font (looks better than default)
-try:
-    font = ImageFont.truetype("arial.ttf", 28)  # adjust font size for fit
-except:
-    font = ImageFont.load_default()
+# --- Main Script ---
+def slice_sprites():
+    """
+    Crops individual sprites from the main sprite sheet and saves them.
+    """
+    print("Starting sprite slicing process...")
 
-# Store digit images
-images = {}
+    # 1. Create the output folder if it doesn't exist
+    try:
+        os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+        print(f"✅ Output folder '{OUTPUT_FOLDER}' is ready.")
+    except OSError as e:
+        print(f"❌ Error creating directory: {e}")
+        return
 
-for d in digits:
-    img = Image.new("RGBA", (width, height), (0, 0, 0, 0))  # transparent
-    draw = ImageDraw.Draw(img)
-    w, h = draw.textsize(d, font=font)
-    draw.text(((width - w) / 2, (height - h) / 2), d, font=font, fill=(0, 0, 0, 255))
-    img.save(os.path.join(out_dir, f"digit_{d}.png"))
-    images[d] = img
+    # 2. Open the main sprite sheet
+    try:
+        main_image = Image.open(SPRITE_SHEET_PATH)
+        print(f"✅ Successfully loaded '{SPRITE_SHEET_PATH}'.")
+    except FileNotFoundError:
+        print(f"❌ Error: Make sure '{SPRITE_SHEET_PATH}' is in the same folder as the script.")
+        return
 
-# Create ZIP of all digits
-zip_path = os.path.join(out_dir, "digits_0_9.zip")
-with zipfile.ZipFile(zip_path, "w") as zipf:
-    for d in digits:
-        zipf.write(os.path.join(out_dir, f"digit_{d}.png"), f"digit_{d}.png")
+    # 3. Loop through, crop, and save each sprite
+    for filename, coords in SPRITES_TO_EXTRACT.items():
+        try:
+            # Crop the image using the defined coordinates
+            sprite_image = main_image.crop(coords)
 
-# Create sprite sheet (all digits side by side)
-sprite_width = width * len(digits)
-sprite_height = height
-sprite = Image.new("RGBA", (sprite_width, sprite_height), (0, 0, 0, 0))
-for i, d in enumerate(digits):
-    sprite.paste(images[d], (i * width, 0))
-sprite.save(os.path.join(out_dir, "digits_sprite.png"))
+            # Define the full path for the new sprite image
+            output_path = os.path.join(OUTPUT_FOLDER, filename)
 
-print("✅ Done! Check the 'digits_output' folder for:")
-print("- digit_0.png … digit_9.png")
-print("- digits_0_9.zip (all digits in one zip)")
-print("- digits_sprite.png (sprite sheet)")
+            # Save the new sprite image
+            sprite_image.save(output_path)
+            print(f"✅ Saved '{output_path}'")
+        except Exception as e:
+            print(f"❌ Failed to save '{filename}'. Reason: {e}")
+
+    print("\n🎉 All sprites have been extracted successfully!")
+
+if __name__ == "__main__":
+    slice_sprites()
