@@ -26,20 +26,20 @@ class GuessingGameGUI:
         self.start_new_game()
 
     def setup_ui(self):
-        # 1. Title Label
+        # 1. Title Label - Added fill='x' to allow horizontal stretching
         title_label = tk.Label(self.master, text="Guess The Number (1-100)", font=("Arial", 16, "bold"))
-        title_label.pack(pady=5)
+        title_label.pack(pady=5, fill='x')
 
-        # 2. Input Field
-        self.guess_entry = tk.Entry(self.master, width=15, font=("Arial", 14), justify='center', state=tk.NORMAL)
-        self.guess_entry.pack(pady=5)
+        # 2. Input Field - Added fill='x' and padx for margin when stretching
+        self.guess_entry = tk.Entry(self.master, font=("Arial", 14), justify='center', state=tk.NORMAL)
+        self.guess_entry.pack(pady=5, padx=40, fill='x')
         self.guess_entry.focus_set() 
         
-        # Bind ALL physical key presses to our custom handler to prevent
-        # the Entry widget's default text insertion and control flow.
+        # Bind ALL physical key presses to our custom handler
         self.guess_entry.bind('<Key>', self._handle_keypress_event)
         
         # 3. Keypad Frame
+        # This frame is kept central and fixed-size by default, as it uses pack without fill/expand.
         keypad_frame = tk.Frame(self.master)
         keypad_frame.pack(pady=10)
         
@@ -56,23 +56,23 @@ class GuessingGameGUI:
             for c, key in enumerate(row):
                 if key == 'Enter':
                     # Enter button calls check_guess directly
-                    button = tk.Button(keypad_frame, text=key, width=5, command=self.check_guess, bg="#90EE90")
+                    button = tk.Button(keypad_frame, text=key, width=8, height=2, font=("Arial", 12), command=self.check_guess, bg="#90EE90")
                 elif key == 'Clear':
                     # Clear button calls keypad_press with 'Clear'
-                    button = tk.Button(keypad_frame, text=key, width=5, command=lambda k=key: self.keypad_press(k), bg="#F08080")
+                    button = tk.Button(keypad_frame, text=key, width=8, height=2, font=("Arial", 12), command=lambda k=key: self.keypad_press(k), bg="#F08080")
                 else: # Numeric buttons (0-9)
                     # Numeric buttons call keypad_press with the digit
-                    button = tk.Button(keypad_frame, text=key, width=5, command=lambda k=key: self.keypad_press(k))
+                    button = tk.Button(keypad_frame, text=key, width=8, height=2, font=("Arial", 12), command=lambda k=key: self.keypad_press(k))
                 
                 button.grid(row=r, column=c, padx=5, pady=5)
                 
-        # 4. Feedback Label
+        # 4. Feedback Label - Added fill='x'
         self.feedback_label = tk.Label(self.master, textvariable=self.feedback_text, font=("Arial", 12))
-        self.feedback_label.pack(pady=5)
+        self.feedback_label.pack(pady=5, fill='x')
         
-        # 5. Score and Hi-Score Label
+        # 5. Score and Hi-Score Label - Added fill='x'
         self.score_label = tk.Label(self.master, textvariable=self.score_text, font=("Arial", 10))
-        self.score_label.pack(pady=5)
+        self.score_label.pack(pady=5, fill='x')
 
         # 6. New Game Button
         new_game_button = tk.Button(self.master, text="Start New Game", command=self.start_new_game)
@@ -91,8 +91,7 @@ class GuessingGameGUI:
     def _handle_keypress_event(self, event):
         """
         Custom handler for physical keyboard presses on the Entry widget.
-        We return 'break' for keys we handle to stop Tkinter's default action
-        (which causes the double-typing bug).
+        We return 'break' for keys we handle to stop Tkinter's default action.
         """
         key = event.keysym
         
@@ -184,7 +183,7 @@ class GuessingGameGUI:
         self.guess_entry.config(state=tk.DISABLED) # Disable the input after the game ends
         
         # Check and update hi-score
-        if self.guesses < self.hi_score:
+        if self.hi_score == float('inf') or self.guesses < self.hi_score:
             messagebox.showinfo("New Hi-score!", 
                                 f"New Hi-score: {self.guesses} attempts! Congratulations!")
             self.hi_score = self.guesses
@@ -215,8 +214,10 @@ class GuessingGameGUI:
         """Saves the current hi-score to the file."""
         HI_SCORE_FILE = "Hi-score.txt"
         try:
-            with open(HI_SCORE_FILE, "w") as file:
-                file.write(str(self.hi_score))
+            # We only save if hi_score is not the default infinity value
+            if self.hi_score != float('inf'):
+                with open(HI_SCORE_FILE, "w") as file:
+                    file.write(str(self.hi_score))
         except Exception as e:
             print(f"Error saving hi-score: {e}")
 
@@ -224,9 +225,8 @@ class GuessingGameGUI:
 # --- Main Application Loop ---
 if __name__ == "__main__":
     root = tk.Tk()
-    # Increased size to accommodate the keypad
-    root.geometry("400x450") 
-    root.resizable(False, False)
+    root.geometry("450x550") # Set a slightly larger initial size for better viewing
+    root.resizable(True, True) # <<< CHANGED: Enable both horizontal and vertical resizing
     
     game_gui = GuessingGameGUI(root)
     
