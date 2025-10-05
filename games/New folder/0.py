@@ -4,7 +4,7 @@ from sys import exit
 pygame.init()
 Screen = pygame.display.set_mode((800,400))
 CLOCK = pygame.time.Clock()
-# test_surface =
+test_surface = pygame.image.load("g")
 
 
 while True:
