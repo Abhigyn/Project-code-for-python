@@ -1,6 +1,21 @@
 import pygame
-from sys import exit
+from sys import exit, _MEIPASS # _MEIPASS is used by PyInstaller for temporary resource path
 from random import randint, choice
+import os # Import os for path manipulation
+
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+# You will need to change ALL file paths in your code to use this function.
+# The 'a/' prefix in your current paths seems to be the main directory for your game assets.
+# We will assume 'a' is the root folder for assets in the PyInstaller bundle.
 
 pygame.init()
 
@@ -9,24 +24,23 @@ class Player(pygame.sprite.Sprite):
     def __init__(self):
         super().__init__()
         # Load player animations
-        player_walk_1 = pygame.image.load("a/graphics/Player/player_walk_1.png").convert_alpha()
-        player_walk_2 = pygame.image.load("a/graphics/Player/player_walk_2.png").convert_alpha()
+        player_walk_1 = pygame.image.load(resource_path("a/graphics/Player/player_walk_1.png")).convert_alpha()
+        player_walk_2 = pygame.image.load(resource_path("a/graphics/Player/player_walk_2.png")).convert_alpha()
         self.player_walk = [player_walk_1, player_walk_2]
-        self.player_jump = pygame.image.load("a/graphics/Player/jump.png").convert_alpha()
+        self.player_jump = pygame.image.load(resource_path("a/graphics/Player/jump.png")).convert_alpha()
         self.player_index = 0
         
         # Initial setup
         self.image = self.player_walk[self.player_index]
-        self.rect = self.image.get_rect(midbottom=(80, 300)) # Changed from (200, 300) to (80, 300) for better start
+        self.rect = self.image.get_rect(midbottom=(80, 300))
         self.gravity = 0
         
         # Sound setup
-        self.jump_music = pygame.mixer.Sound("a/audio/jump.mp3")
+        self.jump_music = pygame.mixer.Sound(resource_path("a/audio/jump.mp3"))
         self.jump_music.set_volume(0.5)
 
     def player_input(self):
         Keys = pygame.key.get_pressed()
-        # Check for both space and up arrow
         if (Keys[pygame.K_SPACE] or Keys[pygame.K_UP]) and self.rect.bottom >= 300:
             self.gravity = -20
             self.jump_music.play()
@@ -36,13 +50,12 @@ class Player(pygame.sprite.Sprite):
         self.rect.y += self.gravity
         if self.rect.bottom >= 300:
             self.rect.bottom = 300
-            self.gravity = 0 # Reset gravity when on the ground
+            self.gravity = 0
 
     def animation_state(self):
         if self.rect.bottom < 300:
-            self.image = self.player_jump # Jump state
+            self.image = self.player_jump
         else:
-            # Walk state
             self.player_index += 0.1
             if self.player_index >= len(self.player_walk): 
                 self.player_index = 0
@@ -59,13 +72,13 @@ class Obstacle(pygame.sprite.Sprite):
         
         # Load obstacle animations
         if type == "fly":
-            fly_frame1 = pygame.image.load("a\graphics\Fly\Fly1.png").convert_alpha()
-            fly_frame2 = pygame.image.load("a\graphics\Fly\Fly2.png").convert_alpha()
+            fly_frame1 = pygame.image.load(resource_path("a/graphics/Fly/Fly1.png")).convert_alpha()
+            fly_frame2 = pygame.image.load(resource_path("a/graphics/Fly/Fly2.png")).convert_alpha()
             self.frames = [fly_frame1, fly_frame2]
             y_pos = 210
         else: # Assumes "snail" if not "fly"
-            snail_frame1 = pygame.image.load("a/graphics/snail/snail1.png").convert_alpha()
-            snail_frame2 = pygame.image.load("a/graphics/snail/snail2.png").convert_alpha()
+            snail_frame1 = pygame.image.load(resource_path("a/graphics/snail/snail1.png")).convert_alpha()
+            snail_frame2 = pygame.image.load(resource_path("a/graphics/snail/snail2.png")).convert_alpha()
             self.frames = [snail_frame1, snail_frame2]
             y_pos = 300
 
@@ -85,7 +98,6 @@ class Obstacle(pygame.sprite.Sprite):
         self.Destroy()
 
     def Destroy(self):
-        # Remove sprite when it moves off-screen
         if self.rect.x <= -100:
             self.kill()
 
@@ -97,21 +109,22 @@ CLOCK = pygame.time.Clock()
 # Game State Variables
 Start_time = 0
 Score = 0
-Game_active = False # Start in the intro screen
+Game_active = False
 
 # Background Music
-bg_music = pygame.mixer.Sound("a/audio/music.wav")
+bg_music = pygame.mixer.Sound(resource_path("a/audio/music.wav"))
 bg_music.play(loops=-1)
 
 # Font Setup
-fount1_Fonts = pygame.font.Font(r"a\font\Pixeltype.ttf", 50)
+# Note: Pygame's font loading for .ttf files works best with the full path
+fount1_Fonts = pygame.font.Font(resource_path("a/font/Pixeltype.ttf"), 50)
 
 # Surfaces
-Sky_surface = pygame.image.load("a/graphics/sky.png").convert()
-Ground_surface = pygame.image.load("a/graphics/ground.png").convert()
+Sky_surface = pygame.image.load(resource_path("a/graphics/sky.png")).convert()
+Ground_surface = pygame.image.load(resource_path("a/graphics/ground.png")).convert()
 
 # Intro Screen Player Image
-player_stand = pygame.image.load("a/graphics/Player/player_stand.png").convert_alpha()
+player_stand = pygame.image.load(resource_path("a/graphics/Player/player_stand.png")).convert_alpha()
 player_stand = pygame.transform.rotozoom(player_stand, 0, 2)
 player_stand_rect = player_stand.get_rect(center=(400, 200))
 
@@ -128,7 +141,7 @@ Obstacle_group = pygame.sprite.Group()
 
 # Timers
 obstacle_timer = pygame.USEREVENT + 1
-pygame.time.set_timer(obstacle_timer, 1500) # Spawns a new obstacle every 1.5 seconds
+pygame.time.set_timer(obstacle_timer, 1500)
 
 # --- Functions ---
 def score():
@@ -141,12 +154,11 @@ def score():
 
 def collisionn():
     """Checks for collision between the player and any obstacle."""
-    # spritecollide returns a list of sprites that intersect with the player sprite
     if pygame.sprite.spritecollide(player.sprite, Obstacle_group, False):
         Obstacle_group.empty()
-        return False  # Collision detected
+        return False
     else:
-        return True  # No collision
+        return True
 
 # --- Game Loop ---
 while True:
@@ -157,12 +169,9 @@ while True:
             exit()
 
         if Game_active:
-            # Obstacle spawning timer
             if event.type == obstacle_timer:
-                # 1/4 chance for a fly, 3/4 chance for a snail
                 Obstacle_group.add(Obstacle(choice(["fly", "snail", "snail", "snail"])))
-        else: # Not Game_active (Intro/Game Over screen)
-            # Restart game on space, up key, or mouse click
+        else:
             if event.type == pygame.KEYDOWN and (event.key == pygame.K_SPACE or event.key == pygame.K_UP):
                 Game_active = True
                 player.sprite.rect.midbottom = (80, 300) 
@@ -202,11 +211,10 @@ while True:
         Screen.blit(Game_name, Game_name_rect)
         Screen.blit(Game_ins, Game_ins_rect)
         
-        # Only display the score after a game has been played (Score > 0 or Start_time > 0)
         if Score > 0 or Start_time > 0:
-             Screen.blit(score_message, score_message_rect)
-        if event.type == pygame.K_SPACE or event.type == pygame.K_UP:
-            Game_active = collisionn
+              Screen.blit(score_message, score_message_rect)
+        # Fix: The original code had a confusing 'if event.type == pygame.K_SPACE' block here, which is wrong.
+        # The game state logic is already handled in the main event loop.
 
     # 4. DISPLAY UPDATE and FRAMERATE CAP
     pygame.display.update()

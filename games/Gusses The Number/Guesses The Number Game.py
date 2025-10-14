@@ -2,6 +2,22 @@ import tkinter as tk
 from tkinter import messagebox
 import random
 import os
+import sys
+
+# Function to get the correct path for resource files in a PyInstaller bundle
+def resource_path(relative_path):
+    """
+    Get absolute path to resource, works for dev and for PyInstaller.
+    PyInstaller creates a temporary folder and stores path in _MEIPASS
+    """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        # For development/regular execution
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 class GuessingGameGUI:
     def __init__(self, master):
@@ -9,6 +25,7 @@ class GuessingGameGUI:
         master.title("Guess The Number Game")
         
         # --- Game State Variables ---
+        self.HI_SCORE_FILE = "Hi-score.txt"
         self.secret_number = 0
         self.guesses = 0
         # Load hi-score immediately upon starting
@@ -39,7 +56,6 @@ class GuessingGameGUI:
         self.guess_entry.bind('<Key>', self._handle_keypress_event)
         
         # 3. Keypad Frame
-        # This frame is kept central and fixed-size by default, as it uses pack without fill/expand.
         keypad_frame = tk.Frame(self.master)
         keypad_frame.pack(pady=10)
         
@@ -185,12 +201,12 @@ class GuessingGameGUI:
         # Check and update hi-score
         if self.hi_score == float('inf') or self.guesses < self.hi_score:
             messagebox.showinfo("New Hi-score!", 
-                                f"New Hi-score: {self.guesses} attempts! Congratulations!")
+                                 f"New Hi-score: {self.guesses} attempts! Congratulations!")
             self.hi_score = self.guesses
             self.save_hi_score()
         else:
             messagebox.showinfo("Game Over", 
-                                f"You guessed it in {self.guesses} attempts.")
+                                 f"You guessed it in {self.guesses} attempts.")
         
         self.update_score_display()
 
@@ -201,32 +217,42 @@ class GuessingGameGUI:
     # --- Hi-Score File Management ---
 
     def load_hi_score(self):
-        """Loads the hi-score from the file."""
-        HI_SCORE_FILE = "Hi-score.txt"
+        """Loads the hi-score from the file using the PyInstaller-compatible path."""
+        # Use resource_path for file access, ensuring it works inside the bundled exe
+        file_path = resource_path(self.HI_SCORE_FILE) 
+        
         try:
-            with open(HI_SCORE_FILE, "r") as file:
+            # We assume the file might be created by the user in the working directory 
+            # if running outside the bundle, or simply present in the same directory 
+            # as the final executable.
+            with open(file_path, "r") as file:
                 return int(file.read().strip())
-        except (FileNotFoundError, ValueError):
+        except (FileNotFoundError, ValueError, IsADirectoryError):
             # If no score exists, set a high value so any score beats it
             return float('inf') 
 
     def save_hi_score(self):
-        """Saves the current hi-score to the file."""
-        HI_SCORE_FILE = "Hi-score.txt"
+        """Saves the current hi-score to the file using the PyInstaller-compatible path."""
+        # Use resource_path for file access
+        file_path = resource_path(self.HI_SCORE_FILE)
+        
         try:
             # We only save if hi_score is not the default infinity value
             if self.hi_score != float('inf'):
-                with open(HI_SCORE_FILE, "w") as file:
+                # Using 'w' will create the file if it doesn't exist, which is what we want.
+                with open(file_path, "w") as file:
                     file.write(str(self.hi_score))
         except Exception as e:
+            # If the PyInstaller temp folder is read-only, this might fail, 
+            # so we print an error but let the program continue.
             print(f"Error saving hi-score: {e}")
 
 
 # --- Main Application Loop ---
 if __name__ == "__main__":
     root = tk.Tk()
-    root.geometry("450x550") # Set a slightly larger initial size for better viewing
-    root.resizable(True, True) # <<< CHANGED: Enable both horizontal and vertical resizing
+    root.geometry("450x550")
+    root.resizable(True, True) 
     
     game_gui = GuessingGameGUI(root)
     
