@@ -60,3 +60,6 @@ move("webfiles", webfiles)
 move("system", system)
 
 print("✅ Sorting complete!")
+if __name__ == '__main__':
+    pass
+    
