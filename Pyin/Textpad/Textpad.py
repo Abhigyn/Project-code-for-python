@@ -2,6 +2,19 @@ from tkinter import *
 from tkinter import messagebox as mg
 from tkinter.filedialog import askopenfilename,asksaveasfilename
 import os
+import sys # Added to help locate bundled resources
+
+# --- Helper function to find the resource path in PyInstaller environment ---
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+# ---------------------------------------------------------------------------
 
 def newFile():
     global File
@@ -11,31 +24,41 @@ def newFile():
 
 def openFile():
     global File
-    File = askopenfilename(defaultextension=".txt",filetypes=[("All Files","*.*"),("Text Doucument","*.txt")])
+    # Note: I corrected the spelling of "Document" in filetypes
+    File = askopenfilename(defaultextension=".txt",filetypes=[("All Files","*.*"),("Text Document","*.txt")])
     if File == "":
         File = None
     else:
         root.title(os.path.basename(File) + " - Text Pad")
         Textarea.delete(1.0,END)
-        f = open(File,"r")
-        Textarea.insert(1.0,f.read())
-        f.close()
+        try:
+            with open(File,"r") as f:
+                Textarea.insert(1.0,f.read())
+        except Exception as e:
+            mg.showerror("Error", f"Could not read file: {e}")
+            File = None # Clear file reference on error
 
 def saveFile():
     global File
     if File == None:
-        File = asksaveasfilename(initialfile="Untiled.txt",defaultextension=".txt",filetypes=[("All Files","*.*"),("Text Doucument","*.txt")])
+        # Note: I corrected the spelling of "Untiled" to "Untitled"
+        File = asksaveasfilename(initialfile="Untitled.txt",defaultextension=".txt",filetypes=[("All Files","*.*"),("Text Document","*.txt")])
         if File == "":
             File = None
         else:
-            f = open(File,"w")
-            f.write(Textarea.get(1.0,END))
-            f.close()
-            root.title(os.path.basename(File) + " - Text Pad")
+            try:
+                with open(File,"w") as f:
+                    f.write(Textarea.get(1.0,END))
+                root.title(os.path.basename(File) + " - Text Pad")
+            except Exception as e:
+                 mg.showerror("Error", f"Could not save file: {e}")
+                 File = None
     else:
-        f = open(File,"w")
-        f.write(Textarea.get(1.0,END))
-        f.close()
+        try:
+            with open(File,"w") as f:
+                f.write(Textarea.get(1.0,END))
+        except Exception as e:
+            mg.showerror("Error", f"Could not save file: {e}")
 def quitApp():
     root.destroy()
 def cut():
@@ -53,7 +76,16 @@ if __name__ == "__main__":
     root.title("Textpad")
     root.geometry("500x400")
 
-    Textarea = Text(root, font="lucida 13 ")
+    # --- UPDATED ICON LINE ---
+    # Use the resource_path helper function to correctly load the icon
+    # It now looks for 'Textpad.ico'
+    try:
+        root.iconbitmap(resource_path('Textpad.ico'))
+    except TclError:
+        print("Could not load Textpad.ico. Running without custom icon.")
+
+
+    Textarea = Text(root, font="lucida 13")
     Textarea.pack(fill=BOTH,expand=True)
     File = None
 
@@ -82,17 +114,16 @@ if __name__ == "__main__":
 
     root.config(menu=MenuBar)
 
-    scroll = Scrollbar(Textarea)
-    scroll.pack(side=RIGHT,fill=Y)
-    scroll.config(command=Textarea.yview)
-    Textarea.config(yscrollcommand = scroll.set)
+    # Scrollbar setup
+    scroll_y = Scrollbar(Textarea)
+    scroll_y.pack(side=RIGHT,fill=Y)
 
-    scroll = Scrollbar(Textarea,orient=HORIZONTAL)
-    scroll.pack(side=BOTTOM,fill=X)
-    scroll.config(command=Textarea.xview)
-    Textarea.config(yscrollcommand = scroll.set)
+    scroll_x = Scrollbar(Textarea,orient=HORIZONTAL)
+    scroll_x.pack(side=BOTTOM,fill=X)
 
+    Textarea.config(yscrollcommand = scroll_y.set, xscrollcommand = scroll_x.set)
 
+    scroll_y.config(command=Textarea.yview)
+    scroll_x.config(command=Textarea.xview)
 
-
-root.mainloop()
+    root.mainloop()
